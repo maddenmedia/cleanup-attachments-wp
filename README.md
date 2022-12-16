@@ -9,5 +9,5 @@ Place this file inside your /web dir and run from the web broswer. Will take awh
 ## Roadmap
 
 1. Convert to WP Plugin
-2. Add in code to check for file duplicates on media upload and prevent them.
+2. Add in code to check for file duplicates on media upload and prevent them. May just use this plugin instead for this future - https://github.com/mcguffin/wp-unique-media
 3. Add AJAX or Websockets for realtime display of pogress log.
