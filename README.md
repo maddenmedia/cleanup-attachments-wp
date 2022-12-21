@@ -1,6 +1,5 @@
 # cleanup-attachments-wp
-Delete Duplicated WordPress Media Files and Auto Replace Them In the Content
-
+Delete Duplicated WordPress Media Files and Auto Replace Them In the Content, Be aware this is a slow process and should only be used on a need case basis where human media clean up could take awhile.
 
 Place this file inside your /web dir and run from the web broswer. Will take awhile to process, if it hangs just refresh. it will pick up where it left off.
 
