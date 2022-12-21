@@ -234,26 +234,26 @@ function doHashCompareImages($media_files, $level = 0) {
           foreach($get_posts_pages['content'] as $post_page_id) {
             $content = get_post_field('post_content', $post_page_id);
             $content = runMediaReplace($files, $media_files[$level], $content,  get_post_mime_type($files->ID));
-            /*wp_update_post(array(
+            wp_update_post(array(
               'ID' => $post_page_id,
               'post_content' => $content
             ));
-            wp_delete_attachment($file['ID']);*/
+            wp_delete_attachment($file['ID']);
           }
         } else if(!empty($get_posts_pages['thumbnail'])) {
           $actionStatus = "[REPLACE] [THUMBNAIL] [DELETE DUPLICATE]";
 
-          /*foreach($get_posts_pages['thumbnail'] as $post_page_id) {
+          foreach($get_posts_pages['thumbnail'] as $post_page_id) {
             wp_update_post(array(
               'ID' => $post_page_id,
               'post_parent' => $media_files[$level]->ID
             ));
             wp_delete_attachment($files->ID);
-          }*/
+          }
 
         } else {
           $actionStatus = "[DELETE NOT USED]";
-          //wp_delete_attachment($files->ID);
+          wp_delete_attachment($files->ID);
         }
 
     }
@@ -262,11 +262,6 @@ function doHashCompareImages($media_files, $level = 0) {
 
     flush();
     ob_flush();
-    /*if() {
-
-    } else {
-
-    }*/
     if($count === 10) {
      // die();
     }
