@@ -77,7 +77,11 @@ function groupMediaFilesByFileName($media_files) {
         if ( !isset( $files[$file_name] ) ) {
           $files[$file_name] = array();
         }
-        $filesize =  filesize(get_attached_file( $file->ID ));
+        $file = get_attached_file( $file->ID );
+        $filesize =  @filesize($file);
+        if(!$filesize) {
+          $filesize = 0;
+        }
         $files[$file_name][$file->ID]['ID'] = $file->ID;
         $files[$file_name][$file->ID]['guid'] = $file->guid;
         $files[$file_name][$file->ID]['post_parent'] = $file->post_parent;
@@ -223,7 +227,6 @@ function doHashCompareImages($media_files, $level = 0) {
       $matchStatus = "[NOT SUPPORTED... POSSIBLY A SVG FILE...]";
     }
 
-
       if($matchStatus !== "[NOT SUPPORTED... POSSIBLY A SVG FILE...]") {
       
         $get_posts_pages = get_posts_by_attachment_id($files->ID);
@@ -252,8 +255,7 @@ function doHashCompareImages($media_files, $level = 0) {
           }
 
         } else {
-          $actionStatus = "[DELETE NOT USED]";
-          wp_delete_attachment($files->ID);
+          $actionStatus = "[KEEP FILE]";
         }
 
     }
@@ -262,21 +264,20 @@ function doHashCompareImages($media_files, $level = 0) {
 
     flush();
     ob_flush();
+
     if($count === 10) {
-     // die();
+     //die();
     }
     if(count($media_files) === $count) {
+      flush();
+      ob_flush();
       $level++;
-      doCompareImages($media_files, $level);
+      doHashCompareImages($media_files, $level);
     }
     $count++;
     flush();
     ob_flush();
   }
-
-
-
-
 }
 flush();
 ob_flush();
