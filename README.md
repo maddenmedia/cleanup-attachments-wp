@@ -6,7 +6,7 @@ Place these files in a dir named `cleanup-attachments` inside your `/web` dir an
 Accessing the URL direct runs the by filename and to access the hash add `?hashCompareCleanUp=y` to your URL.
 
 ## By Filename
-![cleanup-attachemtns](https://user-images.githubusercontent.com/109692527/208029718-94861972-0295-4985-82e1-b42f63e5e31e.JPG)
+![cleanup-attachemtns](https://user-images.githubusercontent.com/109692527/212766585-14975569-3aa8-435d-b0b0-65c2f87f35d6.png)
 
 ## By Hash
 ![cleanup-attachments-hash](https://user-images.githubusercontent.com/109692527/208826547-49d7b906-dbb4-481c-a158-b19aa48e9b5e.JPG)
