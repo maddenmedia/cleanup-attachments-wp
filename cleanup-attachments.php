@@ -67,6 +67,8 @@ ob_flush();
 
   echo "Found Records #: ".$query->found_posts."<br/><br>";
 
+  flush();
+  ob_flush();
 
 function groupMediaFilesByFileName($media_files) {
     // Group media files by file name
@@ -77,8 +79,7 @@ function groupMediaFilesByFileName($media_files) {
         if ( !isset( $files[$file_name] ) ) {
           $files[$file_name] = array();
         }
-        $file = get_attached_file( $file->ID );
-        $filesize =  @filesize($file);
+        $filesize =  @filesize( get_attached_file( $file->ID ));
         if(!$filesize) {
           $filesize = 0;
         }
@@ -218,7 +219,6 @@ function doHashCompareImages($media_files, $level = 0) {
     
     $isSame = round(compareImages(get_attached_file($media_files[$level]->ID), get_attached_file($files->ID)));
 
-    
     if(!$isSame) {
       $matchStatus = "[NOT DUPLICATE]";
     } else if($media_files[$level]->ID === $files->ID) {
@@ -257,7 +257,6 @@ function doHashCompareImages($media_files, $level = 0) {
         } else {
           $actionStatus = "[KEEP FILE]";
         }
-
     }
 
     echo "- Image ". $media_files[$level]->guid." compare to ". $files->guid."... ".$matchStatus."... ".$actionStatus."... <br>";
@@ -286,8 +285,8 @@ doHashCompareImages($media_files, 0);
 die();
 }
 
-
 foreach ( findDuplicateFiles(groupMediaFilesByFileName($media_files)) as $file_name => $file_group ) { 
+
 
   set_time_limit(5600);
   
