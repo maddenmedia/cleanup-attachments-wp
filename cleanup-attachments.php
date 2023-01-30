@@ -2,6 +2,12 @@
 <head><style>label { font-weight: bold; }</style></head>
 <body>
 <?php
+ini_set('display_errors',1);
+error_reporting(E_ALL);
+
+set_time_limit(0); 
+/*ignore_user_abort(true);*/
+ini_set('max_execution_time', 0);
 
 $wpRoot = null;
 $wpLoadFile = "wp-load.php";
@@ -80,9 +86,6 @@ function groupMediaFilesByFileName($media_files) {
           $files[$file_name] = array();
         }
         $filesize =  @filesize( get_attached_file( $file->ID ));
-        if(!$filesize) {
-          $filesize = 0;
-        }
         $files[$file_name][$file->ID]['ID'] = $file->ID;
         $files[$file_name][$file->ID]['guid'] = $file->guid;
         $files[$file_name][$file->ID]['post_parent'] = $file->post_parent;
@@ -207,6 +210,7 @@ function doHashCompareImages($media_files, $level = 0) {
   $count = 0;
   flush();
   ob_flush();
+
   echo "<b> Checking media file ".basename($media_files[$level]->guid)." for duplicates...</b><br>";
 
   foreach($media_files as $files) {
@@ -267,16 +271,17 @@ function doHashCompareImages($media_files, $level = 0) {
     if($count === 10) {
      //die();
     }
+    $count++;
     if(count($media_files) === $count) {
       flush();
       ob_flush();
       $level++;
       doHashCompareImages($media_files, $level);
     }
-    $count++;
     flush();
     ob_flush();
   }
+
 }
 flush();
 ob_flush();
