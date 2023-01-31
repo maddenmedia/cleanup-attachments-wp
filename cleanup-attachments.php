@@ -52,8 +52,6 @@ ob_start();
 // start our process dump
 $startTime = new DateTime();
 $counter = 0;
-echo "<br/><hr><code>";
-echo "<br/>"."Start: ".date("r", $startTime->getTimestamp())."<br/>";
 
 flush();
 ob_flush();
@@ -331,6 +329,10 @@ function checkForDuplicateMedia($files, $level = 0,  $outputList = []) {
 
 }
 
+function delete_wp_media($id) {
+  return wp_delete_attachment($id, true);;
+}
+
 function r($files, $level, $array = []) {
 
   $count = count($files);
@@ -362,7 +364,7 @@ function r($files, $level, $array = []) {
                 'ID' => $post_page_id,
                 'post_content' => $content
               ));
-              wp_delete_attachment($file['ID']);
+              delete_wp_media($file['ID']);
             }
           }
     
@@ -375,7 +377,7 @@ function r($files, $level, $array = []) {
                 'ID' => $post_page_id,
                 'post_parent' => $orginal_file['ID']
               ));
-              wp_delete_attachment($file['ID']);
+              delete_wp_media($file['ID']);
             }
           }
         
@@ -383,7 +385,7 @@ function r($files, $level, $array = []) {
 
           if($orginal_file['guid']) {
             echo "-- ".$duplicate_file['guid']." is not being used and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]... - origin: ".$orginal_file['guid']."\n";
-            wp_delete_attachment($duplicate_file['ID']);
+            delete_wp_media($duplicate_file['ID']);
           }
 
         }
@@ -399,19 +401,12 @@ function r($files, $level, $array = []) {
         r($files, $level, []);
     }
 
+
   }
 
 }
 
 r($files, 0, []);
 
-// duration
-$interval = $startTime->diff(new DateTime());
-
-// end our output
-echo "<br /><br/>"."Finish: ".date("r")."<br/>";
-echo $interval->format("Duration: %H:%I:%S")."<br/>";
-
-echo "</code>";
 ob_end_flush(); 
 ?>
