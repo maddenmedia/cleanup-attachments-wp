@@ -335,6 +335,8 @@ function r($files, $level, $array = []) {
 
   $count = count($files);
 
+  echo "Running Level ".$level." check for duplicates...\n";
+
   foreach ( checkForDuplicateMedia($files, $level, $array)  as $i => $file) { 
 
     $orginal_file = $file;
@@ -344,83 +346,56 @@ function r($files, $level, $array = []) {
     flush();
     ob_flush();
 
-    echo "<b> ID: ".$file['ID']." Checking media file ".$file['filename']." for duplicates...</b><br>";
-
-    echo "<ul>";
-
     if (array_key_exists('duplicates', $file)) {
 
       foreach($file['duplicates'] as $i => $duplicate_file) {
         $get_posts_pages = get_posts_by_attachment_id($duplicate_file['ID']);
 
         if(!empty($get_posts_pages['content'])) {
-    
-          echo "<li>Located a in use duplicate media file...
-          <ul>
-          <li>ID: ".$duplicate_file['ID']."</li>
-          <li>GUID: ".$duplicate_file['guid']."</li>
-          <li>Page/Post ID(s): ".implode(",", $get_posts_pages['content'])."</li>
-          <li>Date Created: ".$duplicate_file['post_date']."</li>
-          <li>File Size: ".$duplicate_file['filesize']." bytes</li>
-          <li>Action: Replace Media and Delete Media</li>
-          </ul>
-          </li>";
-
-          echo "<li><b>Replacing and Deleting Media...</b></li>";
 
           foreach($get_posts_pages['content'] as $post_page_id) {
-            $content = get_post_field('post_content', $post_page_id);
-            //$content = runMediaReplace($duplicate_file, $orginal_file, $content,  get_post_mime_type($duplicate_file['ID']));
-            echo "<li>".$duplicate_file['guid']." has been replaced with ".$orginal_file['guid']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
-            /*wp_update_post(array(
-              'ID' => $post_page_id,
-              'post_content' => $content
-            ));
-            wp_delete_attachment($file['ID']);*/
+            if($orginal_file['guid']) {
+              $content = get_post_field('post_content', $post_page_id);
+              $content = runMediaReplace($duplicate_file, $orginal_file, $content,  get_post_mime_type($duplicate_file['ID']));
+              //echo "<li>".$duplicate_file['guid']." has been replaced with ".$orginal_file['guid']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
+              wp_update_post(array(
+                'ID' => $post_page_id,
+                'post_content' => $content
+              ));
+              wp_delete_attachment($file['ID']);
+            }
           }
     
         } else if(!empty($get_posts_pages['thumbnail'])) {
 
-          echo "<li>Located a in use duplicate thumbnail file...
-          <ul>
-          <li>ID: ".$file['ID']."</li>
-          <li>GUID: ".$file['guid']."</li>
-          <li>Page/Post ID(s): ".implode(",", $get_posts_pages['thumbnail'])."</li>
-          <li>Date Created: ".$file['post_date']."</li>
-          <li>File Size: ".$file['filesize']." bytes</li>
-          <li>Action: Replace Thumbnail and Delete Thumbnail</li>
-          </ul>
-          </li>";
-
-          echo "<li><b>Replacing and Deleting Thumbnail...</b></li>";
-
           foreach($get_posts_pages['thumbnail'] as $post_page_id) {
-            echo "<li>".$duplicate_file['guid']." has been replaced with ".$orginal_file['guid']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
-            /*wp_update_post(array(
-              'ID' => $post_page_id,
-              'post_parent' => $orginal_file['ID']
-            ));
-            wp_delete_attachment($file['ID']);*/
+            if($orginal_file['guid']) {
+              //echo "<li>".$duplicate_file['guid']." has been replaced with ".$orginal_file['guid']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
+              wp_update_post(array(
+                'ID' => $post_page_id,
+                'post_parent' => $orginal_file['ID']
+              ));
+              wp_delete_attachment($file['ID']);
+            }
           }
         
         } else {
 
-          echo "<li>".$duplicate_file['guid']." is not being used and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
-          wp_delete_attachment($duplicate_file['ID']);
-    
+          if($orginal_file['guid']) {
+            echo "-- ".$duplicate_file['guid']." is not being used and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]... - origin: ".$orginal_file['guid']."\n";
+            wp_delete_attachment($duplicate_file['ID']);
+          }
+
         }
       }
 
     }
-    echo "</ul>";
 
     flush();
     ob_flush();
 
     if($count-1 === $i && $level !== $count) {
         $level++;
-
-        //sleep(10);
         r($files, $level, []);
     }
 
