@@ -9,6 +9,7 @@ $wpLoadFile = "wp-load.php";
 
 // attempt to find the load file
 $wpRoot = localFindWordPressRoot();
+
 if ( ($wpRoot != null) && (! is_file("{$wpRoot}/{$wpLoadFile}")) ) {
 	exit(
 		"Error: {$wpRoot}/{$wpLoadFile} was not found. Exiting."."<br/>"
@@ -60,7 +61,7 @@ $args = array(
 $query = new WP_Query( $args );
 $media_files = $query->posts;
 
-echo "Found Records #: ".$query->found_posts."<br/><br>";
+echo "- Found Records #: ".$query->found_posts."\n\n";
 
 flush();
 ob_flush();
@@ -72,7 +73,8 @@ foreach($media_files as $id => $file) {
   $files[$count]['filename'] = substr($fileName, 0, strpos($fileName, '.'));
   $filesize =  @filesize( get_attached_file( $file->ID ));
   $files[$count]['ID'] = $file->ID;
-  $files[$count]['guid'] = $file->guid;
+  $files[$count]['guid'] = parse_url($file->guid, PHP_URL_PATH);
+  $files[$count]['url'] = $file->guid;
   $files[$count]['post_parent'] = $file->post_parent;
   $files[$count]['post_date'] = $file->post_date;
   $files[$count]['filesize'] = $filesize;
@@ -115,7 +117,7 @@ function r($files, $level, $array = []) {
 
   echo "Running Level ".$level." check for duplicates...\n";
 
-  foreach ( checkForDuplicateMedia($files, $level, $array)  as $i => $file) { 
+  foreach ( checkForDuplicateMedia($files, $level, $array) as $i => $file ) { 
 
     $orginal_file = $file;
 
@@ -124,43 +126,51 @@ function r($files, $level, $array = []) {
     flush();
     ob_flush();
 
-    if (array_key_exists('duplicates', $file)) {
 
-      foreach($file['duplicates'] as $i => $duplicate_file) {
+    if (array_key_exists('duplicates',  $orginal_file)) {
+
+      foreach($orginal_file['duplicates'] as $i => $duplicate_file) {
+
         $get_posts_pages = get_posts_by_attachment_id($duplicate_file['ID']);
 
         if(!empty($get_posts_pages['content'])) {
 
           foreach($get_posts_pages['content'] as $post_page_id) {
-            if($orginal_file['guid']) {
+
+           if($orginal_file['guid']) {
+
               $content = get_post_field('post_content', $post_page_id);
-              $content = runMediaReplace($duplicate_file, $orginal_file, $content,  get_post_mime_type($duplicate_file['ID']));
-              //echo "<li>".$duplicate_file['guid']." has been replaced with ".$orginal_file['guid']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
+              $content = runMediaReplace($duplicate_file, $orginal_file, $content, get_post_mime_type($duplicate_file['ID']));
+              echo "-- [CONTENT]... ".$duplicate_file['url']." has been replaced with ".$orginal_file['url']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]..."."\n";
+              
               wp_update_post(array(
                 'ID' => $post_page_id,
                 'post_content' => $content
               ));
-              delete_wp_media($file['ID']);
+              delete_wp_media($duplicate_file['ID']);
+
             }
+
           }
     
         } else if(!empty($get_posts_pages['thumbnail'])) {
 
           foreach($get_posts_pages['thumbnail'] as $post_page_id) {
             if($orginal_file['guid']) {
-              //echo "<li>".$duplicate_file['guid']." has been replaced with ".$orginal_file['guid']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]...</li>";
+              echo "-- [THUMBNAIL]...".$duplicate_file['url']." has been replaced with ".$orginal_file['url']." on post/page ID #".$post_page_id." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]..."."\n";
               wp_update_post(array(
                 'ID' => $post_page_id,
                 'post_parent' => $orginal_file['ID']
               ));
-              delete_wp_media($file['ID']);
+              delete_wp_media($duplicate_file['ID']);
             }
+            
           }
-        
+
         } else {
 
           if($orginal_file['guid']) {
-            echo "-- ".$duplicate_file['guid']." is not being used and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]... - origin: ".$orginal_file['guid']."\n";
+            echo "-- ".$duplicate_file['url']." is not being used and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]... - origin: ".$orginal_file['url']."\n";
             delete_wp_media($duplicate_file['ID']);
           }
 
@@ -172,11 +182,15 @@ function r($files, $level, $array = []) {
     flush();
     ob_flush();
 
+    //debugging only
+    /*if($level === 2609) {
+      die();
+    }*/
+
     if($count-1 === $i && $level !== $count) {
         $level++;
         r($files, $level, []);
     }
-
 
   }
 
