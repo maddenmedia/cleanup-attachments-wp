@@ -29,17 +29,18 @@ function formatBytes($size, $precision = 2) {
 function runMediaReplace($duplicated_file, $orginal_file, $content, $type) {
 
     if(str_contains($type, "image/")) {
-
       $content =  preg_replace("/<!-- wp:image {\"id\":".$duplicated_file['ID']."/", "<!-- wp:image {\"id\":".$orginal_file['ID'], $content);
       $content =  preg_replace("/class=\"wp-image-".$duplicated_file['ID']."/","/class=\"wp-image-".$orginal_file['ID']."/", $content);
-      return str_replace($duplicated_file['guid'], $orginal_file['guid'], $content);
-
+      $content = str_replace($duplicated_file['guid'], $orginal_file['guid'], $content);
+      return $content;
     }
+
+    return $content;
 
 }
 
 function get_posts_by_attachment_id( $attachment_id ) {
-    
+
     $used_as_thumbnail = array();
   
     if ( wp_attachment_is_image( $attachment_id ) ) {
@@ -69,6 +70,9 @@ function get_posts_by_attachment_id( $attachment_id ) {
     $used_in_content = array();
   
     foreach ( $attachment_urls as $attachment_url ) {
+      
+      $attachment_url = parse_url($attachment_url, PHP_URL_PATH);
+
       $content_query = new WP_Query( array(
         's'              => $attachment_url,
         'post_type'      => 'any',	
@@ -76,8 +80,9 @@ function get_posts_by_attachment_id( $attachment_id ) {
         'no_found_rows'  => true,
         'posts_per_page' => -1,
       ) );
-  
+
       $used_in_content = array_merge( $used_in_content, $content_query->posts );
+
     }
   
     $used_in_content = array_unique( $used_in_content );
@@ -90,3 +95,33 @@ function get_posts_by_attachment_id( $attachment_id ) {
     return $posts;
 
   }
+
+function dirToArray($dir) {
+    
+    $result = array();
+
+    $cdir = scandir($dir);
+ 
+    foreach ($cdir as $key => $value) {
+       
+        $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
+
+        if (!in_array($value,array(".",".."))) {
+ 
+            if (is_dir($path)) {
+
+                $result[] = dirToArray($path);
+
+            } else {
+
+                $result[] = $path;
+    
+            } 
+ 
+        }
+ 
+    }
+ 
+    return $result;
+
+ }
