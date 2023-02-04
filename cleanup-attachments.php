@@ -133,7 +133,26 @@ function r($files, $level, $array = []) {
 
         $get_posts_pages = get_posts_by_attachment_id($duplicate_file['ID']);
 
-        if(!empty($get_posts_pages['content'])) {
+        if(!empty($get_posts_pages['content']) && !empty($get_posts_pages['thumbnail'])) {
+
+          if($orginal_file['guid']) {
+          
+            echo "-- [CONTENT] [THUMBNAIL]... ".$duplicate_file['url']." has been replaced with ".$orginal_file['url']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]..."."\n";
+
+            wp_update_post(array(
+              'ID' => $post_page_id,
+              'post_content' => $content
+            ));
+
+            wp_update_post(array(
+              'ID' => $post_page_id,
+              'post_parent' => $orginal_file['ID']
+            ));
+            
+            delete_wp_media($duplicate_file['ID']);
+          }
+
+        } else if(!empty($get_posts_pages['content'])) {
 
           foreach($get_posts_pages['content'] as $post_page_id) {
 
@@ -183,9 +202,9 @@ function r($files, $level, $array = []) {
     ob_flush();
 
     //debugging only
-    /*if($level === 2609) {
+    if($level === 2609) {
       die();
-    }*/
+    }
 
     if($count-1 === $i && $level !== $count) {
         $level++;
