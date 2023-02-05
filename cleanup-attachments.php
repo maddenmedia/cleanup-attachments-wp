@@ -100,6 +100,7 @@ function checkForDuplicateMedia($files, $level = 0,  $outputList = []) {
 }
 
 function r($files, $level, $array = []) {
+  ini_set('memory_limit', '-1');
 
   echo "\n"."Running Level ".$level." check for duplicates..."."\n\n";
   
