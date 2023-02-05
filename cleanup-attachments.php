@@ -123,7 +123,7 @@ function r($files, $level, $array = []) {
       foreach($checkForDuplicateMedia[$level] as $file) {
         if($c === 0) {
           //orginal file always at zero level
-          echo $file['filename_raw']."::". $duplicateCount." "."\n";
+          echo $file['filename_raw']."\n";
           $orginalFile = $file;
         } else {
           //duplicates files always post zero level
