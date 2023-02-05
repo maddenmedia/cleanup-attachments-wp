@@ -74,7 +74,7 @@ usort($media_files, function($a, $b) {
 });
 
 foreach($media_files as $id => $file) {
-  $filename = preg_replace('/-[0-9]*$/', '',  preg_replace('/\\.[^.\\s]{3,4}$/', '', basename( $file->guid )));
+  $filename = preg_replace('/-[0-9]*$/', '', preg_replace('/\\.[^.\\s]{3,4}$/', '', basename( $file->guid )));
   $files[$filename][$count] = $file;
   $filesize =  @filesize( get_attached_file( $file->ID ));
   $files[$filename][$count]->filesize = $filesize;
@@ -134,7 +134,6 @@ function r($files, $level, $array = []) {
               flush();
               ob_flush();
             }
-
           } else if(!empty($get_posts_pages['thumbnail'])) {
             foreach($get_posts_pages['thumbnail'] as $post_page_id) {
               echo "--- [THUMBNAIL]... ".$file->path." has been replaced with ".$orginalFile->path." and has been deleted... you saved ".formatBytes($file->filesize)."... [COMPLETED]..."."\n";
