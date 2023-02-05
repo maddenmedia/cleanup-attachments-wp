@@ -1,8 +1,8 @@
 <?php
 
-ini_set('memory_limit', '-1');
+/*ini_set('memory_limit', '-1');
 set_time_limit(0); 
-ini_set('max_execution_time', 0);
+ini_set('max_execution_time', 0);*/
 
 $wpRoot = null;
 $wpLoadFile = "wp-load.php";
@@ -61,103 +61,92 @@ $args = array(
 $query = new WP_Query( $args );
 $media_files = $query->posts;
 
-echo "- Found Records #: ".$query->found_posts."<Br><Br>";
+echo "Found Records #".$query->found_posts."\n";
 
 flush();
 ob_flush();
 
 $files = [];
 $count = 0;
+
+usort($media_files, function($a, $b) {
+  return strcmp($a->post_title, $b->post_title);
+});
+
 foreach($media_files as $id => $file) {
   $fileName = basename( $file->guid );
-  $files[$count]['filename'] = substr($fileName, 0, strpos($fileName, '.'));
-  $files[$count]['filename_raw'] = str_replace(".jpg", "", $fileName);
+  $filename = preg_replace('/-[0-9]*$/', '', str_replace(".jpg", "", $fileName));
+  $files[$filename][$count] = $file;
   $filesize =  @filesize( get_attached_file( $file->ID ));
-  $files[$count]['ID'] = $file->ID;
-  $files[$count]['guid'] = parse_url($file->guid, PHP_URL_PATH);
-  $files[$count]['url'] = $file->guid;
-  $files[$count]['post_parent'] = $file->post_parent;
-  $files[$count]['post_date'] = $file->post_date;
-  $files[$count]['filesize'] = $filesize;
+  $files[$filename][$count]->filesize = $filesize;
+  $files[$filename][$count]->path = parse_url($file->guid, PHP_URL_PATH);
   $count++;
 }
 
-sort($files);
+$files = array_values($files);
 
-function checkForDuplicateMedia($files, $level = 0,  $outputList = []) {
-  $lastFileName = null;
-  $o = [];
-  foreach($files as $id => $file) {
-    $filename = preg_replace('/-[0-9]*$/', '', $file['filename_raw']);
-    $outputList[$filename][] = $file;
-  }
-  $c = 0;
-  foreach($outputList as $id => $file) {
-    $o[$c] = $file;
-    $c++;
-  }
-  return $o;
-}
+/*echo "<pre>";
+print_r($files);
+echo "</pre>";
+die();*/
 
 function r($files, $level, $array = []) {
-  ini_set('memory_limit', '-1');
 
-  echo "\n"."Running Level ".$level." check for duplicates..."."\n\n";
+  $checkForDuplicateMediaCount = count($files);
+
+  echo "\n"."- Running Level ".$level." check for duplicates..."."\n";
   
-  //echo "<pre>"; print_r(checkForDuplicateMedia($files, $level, $array)); echo "</pre>"; die();
-
-  $checkForDuplicateMedia = checkForDuplicateMedia($files, $array);
-  $checkForDuplicateMediaCount = count($checkForDuplicateMedia);
-
-  foreach ( checkForDuplicateMedia($files, $level, $array) as $i => $file ) { 
+  foreach ( $files as $i => $file ) { 
     set_time_limit(5600);
     flush();
     ob_flush();
-    $duplicateCount = count($checkForDuplicateMedia[$level]);
+    $duplicateCount = count($files[$level]);
     $nextLevel = FALSE;
     $orginalFile = null;
     if($duplicateCount === 1) {
-      echo "-- ".$checkForDuplicateMedia[$level][0]['filename_raw']." has no duplicate images... nothing to do here..."."\n";
+      foreach($files[$level] as $file) {
+        echo "-- ".$file->path." has no duplicate images... nothing to do here..."."\n";
+      }
       $nextLevel = TRUE;
     } else {
       $c = 0;
-      foreach($checkForDuplicateMedia[$level] as $file) {
+      foreach($files[$level] as $file) {
         if($c === 0) {
           //orginal file always at zero level
-          echo $file['filename_raw']."\n";
+          echo "-- Checking ".$file->path." for duplicate files..."."\n";
           $orginalFile = $file;
         } else {
           //duplicates files always post zero level
-          $get_posts_pages = get_posts_by_attachment_id($file['ID']);
+          $get_posts_pages = get_posts_by_attachment_id($file->ID);
           if(!empty($get_posts_pages['content']) && !empty($get_posts_pages['thumbnail'])) {
-            echo "-- [CONTENT] [THUMBNAIL]... ".$file['url']." has been replaced with ".$orginalFile['url']." and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]..."."\n";
+            echo "--- [CONTENT] [THUMBNAIL]... ".$file->path." has been replaced with ".$orginalFile->path." and has been deleted... you saved ".formatBytes($file->filesize)."... [COMPLETED]..."."\n";
             update_wp_post($post_page_id, $content, 'content');
-            update_wp_post($post_page_id, $orginalFile['ID'], 'id');
-            delete_wp_media($file['ID']);
+            update_wp_post($post_page_id, $orginalFile->ID, 'id');
+            delete_wp_media($file->ID);
             flush();
             ob_flush();
           } else if(!empty($get_posts_pages['content'])) {
             foreach($get_posts_pages['content'] as $post_page_id) {
               $content = get_post_field('post_content', $post_page_id);
-              $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($file['ID']));
-              echo "-- [CONTENT]... ".$file['url']." has been replaced with ".$orginalFile['url']." and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]..."."\n";
+              $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($file->ID));
+              echo "--- [CONTENT]... ".$file->path." has been replaced with ".$orginalFile->path." and has been deleted... you saved ".formatBytes($file->filesize)."... [COMPLETED]..."."\n";
               update_wp_post($post_page_id, $content, 'content');
-              delete_wp_media($file['ID']);
+              delete_wp_media($file->ID);
               flush();
               ob_flush();
             }
 
           } else if(!empty($get_posts_pages['thumbnail'])) {
             foreach($get_posts_pages['thumbnail'] as $post_page_id) {
-              echo "-- [THUMBNAIL]... ".$file['url']." has been replaced with ".$orginalFile['url']." and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]..."."\n";
-              update_wp_post($post_page_id, $orginalFile['ID'], 'id');
-              delete_wp_media($file['ID']);
+              echo "--- [THUMBNAIL]... ".$file->path." has been replaced with ".$orginalFile->path." and has been deleted... you saved ".formatBytes($file->filesize)."... [COMPLETED]..."."\n";
+              update_wp_post($post_page_id, $orginalFile->ID, 'id');
+              delete_wp_media($file->ID);
               flush();
               ob_flush();
             }
           } else {
-            echo "-- [FILE] ".$file['url']." is not being used and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]... - origin: ".$orginalFile['url']."\n";
-            delete_wp_media($file['ID']);
+            echo "--- [FILE] ".$file->path." is not being used and has been deleted... you saved ".formatBytes($file->filesize)."... [COMPLETED]... - origin: ".$orginalFile->path."\n";
+            delete_wp_media($file->ID);
           }
         }
         $c++;
@@ -169,11 +158,20 @@ function r($files, $level, $array = []) {
       }
     }
 
+    if($checkForDuplicateMediaCount - 1 === $level) {
+      die();
+    }
+
+    /*unset($files[$level]);
+    echo "<pre>";
+    echo $level;
+    print_r($files[$level]);
+    echo "</pre>";
     //debugging only
-    /*if($level === 609) {
+    if($level === 3) {
       die();
     }*/
-
+   
     if($checkForDuplicateMediaCount !== $level && $nextLevel === TRUE) {
       $level++;
       r($files, $level, []);
@@ -181,8 +179,10 @@ function r($files, $level, $array = []) {
 
     flush();
     ob_flush();
-
   }
+  
+  // keep load off of cpu for 1 second
+  sleep(1);
 }
 
 r($files, 0, []);
