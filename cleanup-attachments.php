@@ -61,7 +61,7 @@ $args = array(
 $query = new WP_Query( $args );
 $media_files = $query->posts;
 
-echo "- Found Records #: ".$query->found_posts."\n\n";
+echo "- Found Records #: ".$query->found_posts."<Br><Br>";
 
 flush();
 ob_flush();
@@ -71,6 +71,7 @@ $count = 0;
 foreach($media_files as $id => $file) {
   $fileName = basename( $file->guid );
   $files[$count]['filename'] = substr($fileName, 0, strpos($fileName, '.'));
+  $files[$count]['filename_raw'] = str_replace(".jpg", "", $fileName);
   $filesize =  @filesize( get_attached_file( $file->ID ));
   $files[$count]['ID'] = $file->ID;
   $files[$count]['guid'] = parse_url($file->guid, PHP_URL_PATH);
@@ -84,138 +85,105 @@ foreach($media_files as $id => $file) {
 sort($files);
 
 function checkForDuplicateMedia($files, $level = 0,  $outputList = []) {
-  $count = count($files);
-  $lastFileName = '';
+  $lastFileName = null;
+  $o = [];
   foreach($files as $id => $file) {
-
-    $filename = $file['filename'];
-    
-    if($filename === $lastFileName) {
-      $idPOS = $id;
-    }
-
-    $filename_remove_last_dash = preg_replace('/-[0-9]*$/', '', $filename);
-    $lastFileName_remove_last_dash = preg_replace('/-[0-9]*$/', '', $lastFileName);
-
-    if ($lastFileName_remove_last_dash === $filename_remove_last_dash && $filename !== $lastFileName) {
-      $outputList[$idPOS]['duplicates'][] = $files[$id];
-    } else {
-      $outputList[$id] = $files[$id];
-    }
-
-    $lastFileName =  $files[$level]['filename'];
-
+    $filename = preg_replace('/-[0-9]*$/', '', $file['filename_raw']);
+    $outputList[$filename][] = $file;
   }
-
-  return $outputList;
-
+  $c = 0;
+  foreach($outputList as $id => $file) {
+    $o[$c] = $file;
+    $c++;
+  }
+  return $o;
 }
 
 function r($files, $level, $array = []) {
 
-  $count = count($files);
+  echo "\n"."Running Level ".$level." check for duplicates..."."\n\n";
+  
+  //echo "<pre>"; print_r(checkForDuplicateMedia($files, $level, $array)); echo "</pre>"; die();
 
-  echo "Running Level ".$level." check for duplicates...\n";
+  $checkForDuplicateMedia = checkForDuplicateMedia($files, $array);
+  $checkForDuplicateMediaCount = count($checkForDuplicateMedia);
 
   foreach ( checkForDuplicateMedia($files, $level, $array) as $i => $file ) { 
-
-    $orginal_file = $file;
-
     set_time_limit(5600);
-
     flush();
     ob_flush();
-
-
-    if (array_key_exists('duplicates',  $orginal_file)) {
-
-      foreach($orginal_file['duplicates'] as $i => $duplicate_file) {
-
-        $get_posts_pages = get_posts_by_attachment_id($duplicate_file['ID']);
-
-        if(!empty($get_posts_pages['content']) && !empty($get_posts_pages['thumbnail'])) {
-
-          if($orginal_file['guid']) {
-          
-            echo "-- [CONTENT] [THUMBNAIL]... ".$duplicate_file['url']." has been replaced with ".$orginal_file['url']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]..."."\n";
-
-            wp_update_post(array(
-              'ID' => $post_page_id,
-              'post_content' => $content
-            ));
-
-            wp_update_post(array(
-              'ID' => $post_page_id,
-              'post_parent' => $orginal_file['ID']
-            ));
-            
-            delete_wp_media($duplicate_file['ID']);
-          }
-
-        } else if(!empty($get_posts_pages['content'])) {
-
-          foreach($get_posts_pages['content'] as $post_page_id) {
-
-           if($orginal_file['guid']) {
-
-              $content = get_post_field('post_content', $post_page_id);
-              $content = runMediaReplace($duplicate_file, $orginal_file, $content, get_post_mime_type($duplicate_file['ID']));
-              echo "-- [CONTENT]... ".$duplicate_file['url']." has been replaced with ".$orginal_file['url']." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]..."."\n";
-              
-              wp_update_post(array(
-                'ID' => $post_page_id,
-                'post_content' => $content
-              ));
-              delete_wp_media($duplicate_file['ID']);
-
-            }
-
-          }
-    
-        } else if(!empty($get_posts_pages['thumbnail'])) {
-
-          foreach($get_posts_pages['thumbnail'] as $post_page_id) {
-            if($orginal_file['guid']) {
-              echo "-- [THUMBNAIL]...".$duplicate_file['url']." has been replaced with ".$orginal_file['url']." on post/page ID #".$post_page_id." and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]..."."\n";
-              wp_update_post(array(
-                'ID' => $post_page_id,
-                'post_parent' => $orginal_file['ID']
-              ));
-              delete_wp_media($duplicate_file['ID']);
-            }
-            
-          }
-
+    $duplicateCount = count($checkForDuplicateMedia[$level]);
+    $nextLevel = FALSE;
+    $orginalFile = null;
+    if($duplicateCount === 1) {
+      echo "-- ".$checkForDuplicateMedia[$level][0]['filename_raw']." has no duplicate images... nothing to do here..."."\n";
+      $nextLevel = TRUE;
+    } else {
+      $c = 0;
+      foreach($checkForDuplicateMedia[$level] as $file) {
+        if($c === 0) {
+          //orginal file always at zero level
+          echo $file['filename_raw']."::". $duplicateCount." "."\n";
+          $orginalFile = $file;
         } else {
+          //duplicates files always post zero level
+          $get_posts_pages = get_posts_by_attachment_id($file['ID']);
+          if(!empty($get_posts_pages['content']) && !empty($get_posts_pages['thumbnail'])) {
+            echo "-- [CONTENT] [THUMBNAIL]... ".$file['url']." has been replaced with ".$orginalFile['url']." and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]..."."\n";
+            update_wp_post($post_page_id, $content, 'content');
+            update_wp_post($post_page_id, $orginalFile['ID'], 'id');
+            delete_wp_media($file['ID']);
+            flush();
+            ob_flush();
+          } else if(!empty($get_posts_pages['content'])) {
+            foreach($get_posts_pages['content'] as $post_page_id) {
+              $content = get_post_field('post_content', $post_page_id);
+              $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($file['ID']));
+              echo "-- [CONTENT]... ".$file['url']." has been replaced with ".$orginalFile['url']." and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]..."."\n";
+              update_wp_post($post_page_id, $content, 'content');
+              delete_wp_media($file['ID']);
+              flush();
+              ob_flush();
+            }
 
-          if($orginal_file['guid']) {
-            echo "-- ".$duplicate_file['url']." is not being used and has been deleted... you saved ".formatBytes($duplicate_file['filesize'])."... [COMPLETED]... - origin: ".$orginal_file['url']."\n";
-            delete_wp_media($duplicate_file['ID']);
+          } else if(!empty($get_posts_pages['thumbnail'])) {
+            foreach($get_posts_pages['thumbnail'] as $post_page_id) {
+              echo "-- [THUMBNAIL]... ".$file['url']." has been replaced with ".$orginalFile['url']." and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]..."."\n";
+              update_wp_post($post_page_id, $orginalFile['ID'], 'id');
+              delete_wp_media($file['ID']);
+              flush();
+              ob_flush();
+            }
+          } else {
+            echo "-- [FILE] ".$file['url']." is not being used and has been deleted... you saved ".formatBytes($file['filesize'])."... [COMPLETED]... - origin: ".$orginalFile['url']."\n";
+            delete_wp_media($file['ID']);
           }
-
+        }
+        $c++;
+        flush();
+        ob_flush();
+        if($c === $duplicateCount) {
+          $nextLevel = TRUE;
         }
       }
+    }
 
+    //debugging only
+    /*if($level === 609) {
+      die();
+    }*/
+
+    if($checkForDuplicateMediaCount !== $level && $nextLevel === TRUE) {
+      $level++;
+      r($files, $level, []);
     }
 
     flush();
     ob_flush();
 
-    //debugging only
-    if($level === 2609) {
-      die();
-    }
-
-    if($count-1 === $i && $level !== $count) {
-        $level++;
-        r($files, $level, []);
-    }
-
   }
-
 }
 
 r($files, 0, []);
 
 ob_end_flush(); 
-?>
