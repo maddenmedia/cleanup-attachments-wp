@@ -74,8 +74,7 @@ usort($media_files, function($a, $b) {
 });
 
 foreach($media_files as $id => $file) {
-  $fileName = basename( $file->guid );
-  $filename = preg_replace('/-[0-9]*$/', '', str_replace(".jpg", "", $fileName));
+  $filename = preg_replace('/-[0-9]*$/', '',  preg_replace('/\\.[^.\\s]{3,4}$/', '', basename( $file->guid )));
   $files[$filename][$count] = $file;
   $filesize =  @filesize( get_attached_file( $file->ID ));
   $files[$filename][$count]->filesize = $filesize;
