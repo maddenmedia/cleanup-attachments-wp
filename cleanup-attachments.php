@@ -119,13 +119,20 @@ function r($files, $level, $array = []) {
           $get_posts_pages = get_posts_by_attachment_id($file->ID);
           if(!empty($get_posts_pages['content']) && !empty($get_posts_pages['thumbnail'])) {
             echo "--- [CONTENT] [THUMBNAIL]... ".$file->path." has been replaced with ".$orginalFile->path." and has been deleted... you saved ".formatBytes($file->filesize)."... [COMPLETED]..."."\n";
-            $content = get_post_field('post_content', $post_page_id);
-            $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($file->ID));
-            update_wp_post($post_page_id, $content, 'content');
-            update_wp_post($post_page_id, $orginalFile->ID, 'id');
-            delete_wp_media($file->ID);
-            flush();
-            ob_flush();
+            foreach($get_posts_pages['content'] as $post_page_id) {
+              $content = get_post_field('post_content', $post_page_id);
+              $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($file->ID));
+              update_wp_post($post_page_id, $content, 'content');
+              delete_wp_media($file->ID);
+              flush();
+              ob_flush();
+            }
+            foreach($get_posts_pages['thumbnail'] as $post_page_id) {
+              update_wp_post($post_page_id, $orginalFile->ID, 'id');
+              delete_wp_media($file->ID);
+              flush();
+              ob_flush();
+            }
           } else if(!empty($get_posts_pages['content'])) {
             foreach($get_posts_pages['content'] as $post_page_id) {
               $content = get_post_field('post_content', $post_page_id);
