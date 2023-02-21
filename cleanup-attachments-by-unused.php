@@ -74,6 +74,7 @@ function doesMediaExistinWP($filename) {
     $image_src =  _wp_relative_upload_path( $filename );
     $query = "SELECT ID FROM {$wpdb->posts} WHERE guid LIKE '%$image_src%'";
     $ID = intval($wpdb->get_var($query));
+    $wpdb->close();
     return $ID;
 }
 
@@ -95,7 +96,7 @@ function doMediaClean($getMediaFiles, $currentPage = 0) {
         $fileID = doesMediaExistinWP($file['filename']);
 
         if($fileID) {
-            output("-- Media file". $file['filename']." does <span style='color:green'> exist</span>..."."<br>");
+            output("-- Media file". $file['filename']." does <span style='color:green'> exists</span>..."."<br>");
         } else {
             output("-- Media file". $file['filename']." does <span style='color:red'>not exist</span>..."."<br>");
             unlink($file['filename']);
@@ -105,9 +106,9 @@ function doMediaClean($getMediaFiles, $currentPage = 0) {
 
         if($count === $perChunk && $currentPage !== $pages) {
             $currentPage++;
-            if( $currentPage === 3) {
-                //die();
-            }
+            /*if( $currentPage === 1) {
+                die();
+            }*/
             gc_collect_cycles();
             sleep(1);
             doMediaClean($getMediaFiles, $currentPage);
