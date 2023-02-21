@@ -156,7 +156,7 @@ function doMediaClean($getMediaFiles, $level = 0, $currentPage = 0) {
         } else {
             
             $diff = $compareMachine->compareWith($file['filename']);
-            
+
             if($diff < 11) {
 
                 $fileID = doesMediaExistinWP($file['filename']);
@@ -172,8 +172,11 @@ function doMediaClean($getMediaFiles, $level = 0, $currentPage = 0) {
 
                     } else if($isFilenameAppenedWithDigit) {
 
+                        $orginalFile = (object) ['ID' => $fileID, 'path' => $getMediaFiles[$level]['filename']];
+                        $duplicateFile = (object) ['ID' => $fileID, 'path' => $file['filename']];
+
                         output("-- Media file ". $file['filename']." is a <span style='color:red'>match, but being used in wordpress</span>..."."<br>");
-                        //getPostContent($fileID, $file['filename']);
+                        //getPostContent($duplicateFile, $orginalFile);
 
                     } else {
 
