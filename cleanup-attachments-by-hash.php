@@ -1,8 +1,9 @@
 <?php
+ob_implicit_flush(true);
+ob_start();
 
-ini_set('memory_limit', '-1');
-set_time_limit(0); 
-ini_set('max_execution_time', 0);
+error_reporting(1);
+
 
 $wpRoot = null;
 $wpLoadFile = "wp-load.php";
@@ -44,105 +45,233 @@ require_once ABSPATH."wp-admin/includes/image.php";
 require_once "lib/compare-images.lib.php";
 require_once "lib/helpers.php";
 
-global $wpdb;
+/*function compareImages($orginial_image, $image_to_compare) {
 
-ob_start();
+    // Load the two images
+$image1 = imagecreatefromjpeg($orginial_image);
+$image2 = imagecreatefromjpeg($image_to_compare);
 
-flush();
-ob_flush();
+// Get the width and height of the images
+$width = imagesx($image1);
+$height = imagesy($image1);
 
-// Get all media files
-$args = array(
-  'post_type' => 'attachment',
-  'post_status' => 'any',
-  'posts_per_page' => -1,
-);
+// Set the initial difference to 0
+$difference = 0;
 
-$query = new WP_Query( $args );
-$media_files = $query->posts;
+// Compare the two images pixel by pixel
+for ($x = 0; $x < $width; $x++) {
+    for ($y = 0; $y < $height; $y++) {
+        $rgb1 = imagecolorat($image1, $x, $y);
+        $r1 = ($rgb1 >> 16) & 0xFF;
+        $g1 = ($rgb1 >> 8) & 0xFF;
+        $b1 = $rgb1 & 0xFF;
 
-echo "Found Records #: ".$query->found_posts."\n\n";
+        $rgb2 = imagecolorat($image2, $x, $y);
+        $r2 = ($rgb2 >> 16) & 0xFF;
+        $g2 = ($rgb2 >> 8) & 0xFF;
+        $b2 = $rgb2 & 0xFF;
 
-flush();
-ob_flush();
-
-function doHashCompareImages($media_files, $level = 0) {
-  
-  $count = 0;
-
-  echo "- Checking media file ".basename($media_files[$level]->guid)." for duplicates... \n";
-
-  foreach($media_files as $files) {
-
-    set_time_limit(5600);
-    
-    flush();
-    ob_flush();
-
-    $matchStatus = "[DUPLICATE]";
-    
-    $isSame = round(compareImages(get_attached_file($media_files[$level]->ID), get_attached_file($files->ID)));
-
-    if(!$isSame) {
-      $matchStatus = "[NOT DUPLICATE]";
-    } else if($media_files[$level]->ID === $files->ID) {
-      $matchStatus = "[ORIGINAL IMAGE]";
-    } else if($isSame <= -1) {
-      $matchStatus = "[NOT SUPPORTED... POSSIBLY A SVG FILE...]";
+        $difference += abs($r1 - $r2);
+        $difference += abs($g1 - $g2);
+        $difference += abs($b1 - $b2);
     }
-
-      if($matchStatus !== "[NOT SUPPORTED... POSSIBLY A SVG FILE...]" && $matchStatus !== "[ORIGINAL IMAGE]" && $matchStatus !== "[NOT DUPLICATE]") {
-      
-        $get_posts_pages = get_posts_by_attachment_id($files->ID);
-
-        $actionStatus = "[KEEP]";
-        if(!empty($get_posts_pages['content'])) {
-          $actionStatus = "[REPLACE] [UPDATE] [IMAGE] [DELETE DUPLICATE]";
-          foreach($get_posts_pages['content'] as $post_page_id) {
-            $content = get_post_field('post_content', $post_page_id);
-            //$content = runMediaReplace($files, $media_files[$level], $content,  get_post_mime_type($files->ID));
-            /*wp_update_post(array(
-              'ID' => $post_page_id,
-              'post_content' => $content
-            ));
-            wp_delete_attachment($file['ID']);*/
-          }
-          die();
-        } else if(!empty($get_posts_pages['thumbnail'])) {
-          $actionStatus = "[REPLACE] [THUMBNAIL] [DELETE DUPLICATE]";
-
-          foreach($get_posts_pages['thumbnail'] as $post_page_id) {
-            /*wp_update_post(array(
-              'ID' => $post_page_id,
-              'post_parent' => $media_files[$level]->ID
-            ));
-            wp_delete_attachment($files->ID);*/
-          }
-
-        } else {
-          $actionStatus = "[KEEP FILE]";
-        }
-    }
-
-    echo "-- Comparing Image #".$count." at ".$media_files[$level]->guid." to ". $files->guid."... ".$matchStatus."... ".$actionStatus."... \n";
-
-    flush();
-    ob_flush();
-
-    if($count === 10) {
-     //die();
-    }
-    $count++;
-    if(count($media_files) === $count) {
-      $level++;
-      doHashCompareImages($media_files, $level);
-    }
-    flush();
-    ob_flush();
-  }
-
 }
 
+// Calculate the average difference
+$avg_difference = $difference / ($width * $height);
+// Output the result
+if ($avg_difference > 0) {
+   return false;
+} else {
+    return true;
+}
 
-doHashCompareImages($media_files, 0);
+// Free up memory
+imagedestroy($image1);
+imagedestroy($image2);
 
+}*/
+
+function getMediaFiles($dir) {
+    $rootDir = realpath($_SERVER["DOCUMENT_ROOT"]);
+
+    $files = [];
+    $di = new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS);
+    $i = 0;
+    foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
+        $files[$i]['filename'] = "..".str_replace($rootDir, "", $filename);
+        $files[$i]['bytes'] =  $file->getSize();
+        $i++;
+    }
+    asort($files);
+    return array_values($files);
+}
+
+function output($str) {
+    echo $str;
+    ob_end_flush();
+    ob_flush();
+    flush();
+    ob_start();
+}
+
+function doesMediaExistinWP($filename) {
+    global $wpdb;
+    $filename = str_replace("../", "", $filename);
+    $image_src =  _wp_relative_upload_path( $filename );
+    $query = "SELECT ID FROM {$wpdb->posts} WHERE guid LIKE '%$image_src%'";
+    $ID = intval($wpdb->get_var($query));
+    return $ID;
+}
+
+function isMediaIndexFile($filename) {
+    preg_match('/-\d+x\d+/', $filename, $matches);
+    if(!empty($matches)) {
+        return true;
+    }
+    return false;
+}
+
+function isFilenameAppenedWithDigit($filename) {
+    preg_match('\d+\.\w+/', $filename, $matches);
+    print_R($matches);
+    if(!empty($matches)) {
+        return $matches;
+    }
+    return false;
+}
+
+function getPostContent($fileID, $orginalFile) {
+    $get_posts_pages = get_posts_by_attachment_id($fileID);
+    if(!empty($get_posts_pages['content']) && !empty($get_posts_pages['thumbnail'])) {
+
+        foreach($get_posts_pages['content'] as $post_page_id) {
+            $content = get_post_field('post_content', $post_page_id);
+            $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($fileID));
+
+            print_r($content);
+            /*update_wp_post($post_page_id, $content, 'content');
+            delete_wp_media($fileID);*/
+          }
+
+          foreach($get_posts_pages['thumbnail'] as $post_page_id) {
+            /*update_wp_post($post_page_id, $fileID, 'id');
+            delete_wp_media($fileID);*/
+          }
+    
+    } else if(!empty($get_posts_pages['content'])) {
+
+        foreach($get_posts_pages['content'] as $post_page_id) {
+            /*$content = get_post_field('post_content', $post_page_id);
+            $content = runMediaReplace($file, $orginalFile, $content, get_post_mime_type($fileID));
+            update_wp_post($post_page_id, $content, 'content');
+            delete_wp_media($fileID);*/
+        }
+
+    } else if(!empty($get_posts_pages['thumbnail'])) {
+
+        foreach($get_posts_pages['thumbnail'] as $post_page_id) {
+            /*update_wp_post($post_page_id, $fileID, 'id');
+            delete_wp_media($fileID);*/
+        }
+        
+    }
+}
+
+function doMediaClean($getMediaFiles, $level = 0, $currentPage = 0) {
+    
+    $count = 0;
+    $totalMediaCount = count($getMediaFiles);
+    $perChunk = 50;
+    $currentLevel = $level;
+    $pages = ceil($totalMediaCount / $perChunk);
+
+    output("<br>"."- <b>Checking media file ". $getMediaFiles[$level]['filename']." for duplicates on page ".$currentPage." out of ".$pages." on level ".$level."..."."</b><br>");
+
+    $compareMachine = new compareImages($getMediaFiles[$level]['filename']);
+
+    $getMediaFilesChunk = array_chunk($getMediaFiles, $perChunk);
+
+    foreach($getMediaFilesChunk[$currentPage] as $index => $file) {
+       
+        set_time_limit(5600);
+
+        if($file['filename'] === $getMediaFiles[$level]['filename']) {
+
+            output("-- Orginal File Not Being Checked... SKIPPING..."."<br>");
+
+        } else {
+            
+            $diff = $compareMachine->compareWith($file['filename']);
+            
+            if($diff < 11) {
+
+                $fileID = doesMediaExistinWP($file['filename']);
+                $isFilenameAppenedWithDigit = isFilenameAppenedWithDigit($file['filename']);
+
+
+                if($fileID) {
+
+                    if(isMediaIndexFile($file['filename'])) {
+                       
+                        output("-- Media file ". $file['filename']." is a <span style='color:red'>match, but being used in wordpress and is an index file</span>..."."<br>");
+                        //unlink($file['filename']);
+
+                    } else if($isFilenameAppenedWithDigit) {
+
+                        output("-- Media file ". $file['filename']." is a <span style='color:red'>match, but being used in wordpress</span>..."."<br>");
+                        //getPostContent($fileID, $file['filename']);
+
+                    } else {
+
+                        //do nothing with orignal file
+                        output("-- Media file ". $file['filename']." is a <span style='color:red'>match, but being used in wordpress.. this should be the orginal file</span>..."."<br>");
+
+                    }
+
+
+                } else {
+
+                    if(isMediaIndexFile($file['filename'])) {
+                        output("-- Media file ". $file['filename']." is a <span style='color:green'>match, not being used in wordpress and is an index file</span>..."."<br>");
+                        //unlink($file['filename']);
+                    } else {
+                        output("-- Media file ". $file['filename']." is a <span style='color:green'>match, not being used in wordpress</span>..."."<br>");
+                          //unlink($file['filename']);
+                    }
+
+                }
+
+            } else {
+
+                output("-- Media file". $file['filename']." does <span style='color:red'>not match</span>..."."<br>");
+
+            }
+        }
+        $count++;
+
+        if($count === $perChunk && $currentPage !== $pages) {
+            $currentPage++;
+            if( $currentPage === 3) {
+                die();
+            }
+            gc_collect_cycles();
+            doMediaClean($getMediaFiles, $level, $currentPage);
+        } else if($pages === $currentPage -1) {
+            $level++;
+            ob_end_clean();
+            doMediaClean($getMediaFiles, $level, 0);
+         } else if($totalMediaCount === $level) {
+            //run($indexedMedia);
+         }
+
+    }
+}
+
+$uploadDir = wp_get_upload_dir();
+$basedir = $uploadDir['basedir'];
+$getMediaFiles = getMediaFiles($basedir);
+
+doMediaClean($getMediaFiles);
+
+ob_end_flush(); 
