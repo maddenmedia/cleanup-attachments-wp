@@ -98,7 +98,7 @@ function doMediaClean($getMediaFiles, $currentPage = 0) {
             output("-- Media file". $file['filename']." does <span style='color:green'> exist</span>..."."<br>");
         } else {
             output("-- Media file". $file['filename']." does <span style='color:red'>not exist</span>..."."<br>");
-            //unlink($file['filename']);
+            unlink($file['filename']);
         }
 
         $count++;
