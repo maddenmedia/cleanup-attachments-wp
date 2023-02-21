@@ -45,53 +45,6 @@ require_once ABSPATH."wp-admin/includes/image.php";
 require_once "lib/compare-images.lib.php";
 require_once "lib/helpers.php";
 
-/*function compareImages($orginial_image, $image_to_compare) {
-
-    // Load the two images
-$image1 = imagecreatefromjpeg($orginial_image);
-$image2 = imagecreatefromjpeg($image_to_compare);
-
-// Get the width and height of the images
-$width = imagesx($image1);
-$height = imagesy($image1);
-
-// Set the initial difference to 0
-$difference = 0;
-
-// Compare the two images pixel by pixel
-for ($x = 0; $x < $width; $x++) {
-    for ($y = 0; $y < $height; $y++) {
-        $rgb1 = imagecolorat($image1, $x, $y);
-        $r1 = ($rgb1 >> 16) & 0xFF;
-        $g1 = ($rgb1 >> 8) & 0xFF;
-        $b1 = $rgb1 & 0xFF;
-
-        $rgb2 = imagecolorat($image2, $x, $y);
-        $r2 = ($rgb2 >> 16) & 0xFF;
-        $g2 = ($rgb2 >> 8) & 0xFF;
-        $b2 = $rgb2 & 0xFF;
-
-        $difference += abs($r1 - $r2);
-        $difference += abs($g1 - $g2);
-        $difference += abs($b1 - $b2);
-    }
-}
-
-// Calculate the average difference
-$avg_difference = $difference / ($width * $height);
-// Output the result
-if ($avg_difference > 0) {
-   return false;
-} else {
-    return true;
-}
-
-// Free up memory
-imagedestroy($image1);
-imagedestroy($image2);
-
-}*/
-
 function getMediaFiles($dir) {
     $rootDir = realpath($_SERVER["DOCUMENT_ROOT"]);
 
